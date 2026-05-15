@@ -19,7 +19,7 @@ Run multiple MCP tool servers behind **[mcpo](https://github.com/open-webui/mcpo
 ## Out of scope (unless explicitly expanded later)
 
 - Public internet exposure or multi-tenant auth at the edge.
-- Committing API keys, tokens, kubeconfig, or `.env` files with real values.
+- Committing API keys, tokens, kubeconfig, or `techops/production/.env` with real values.
 
 ## Planned MCP servers
 
@@ -43,6 +43,41 @@ Production / final container definitions live under **`techops/production/`** (n
 
 - **`techops/production/docker-compose.production.yaml`** — production Compose stack
 - **`techops/production/production.Dockerfile`** — production image build
+- **`techops/production/mcp-servers.json`** — Claude-style `mcpServers` config mounted at **`/app/mcp-servers.json`** in the image
+- **`techops/production/docker-entrypoint.sh`** — wraps `mcpo` with optional `MCPO_API_KEY` / `MCPO_STRICT_AUTH`
+- **`techops/production/template.env`** — committed variable template; copy to **`techops/production/.env`** (gitignored) for local Compose
+
+The runtime is **Docker-only**: build and run with Compose from the repo root (see [README.md](../README.md) and [techops/production/README.md](../techops/production/README.md)).
+
+## Pinned mcpo version and invocation
+
+| Item | Value |
+|------|--------|
+| Gateway image | `ghcr.io/open-webui/mcpo` **pinned by digest** in [production.Dockerfile](techops/production/production.Dockerfile) (`sha256:1e82c9555c19e50b80745705f32b47a2647589f35279527b5118ecd3a71bd467` — corresponds to upstream `main` at pin time; GHCR does not ship `v0.0.x` tags) |
+| Config | `mcpo --config /app/mcp-servers.json` (see [mcpo README](https://github.com/open-webui/mcpo)) |
+| Listen | `--host 0.0.0.0` `--port 8000` (defaults; override with `MCPO_HOST` / `MCPO_PORT` in `techops/production/.env`) |
+| Optional HTTP auth | `--api-key` / `--strict-auth` via `MCPO_API_KEY` / `MCPO_STRICT_AUTH` |
+
+### MCP environment (`techops/production/.env`, not committed)
+
+mcpo spawns each MCP with **`os.environ` merged** with any per-server `env` in JSON; this repo keeps secrets **only** in **`techops/production/.env`** (see [`template.env`](../techops/production/template.env)).
+
+| MCP | Required / common variables |
+|-----|-----------------------------|
+| Trello | `TRELLO_API_KEY`, `TRELLO_TOKEN`; optional `TRELLO_WORKSPACE_ID`, `TRELLO_BOARD_ID` |
+| Context7 | `CONTEXT7_API_KEY` |
+| Playwright | Optional `PLAYWRIGHT_MCP_*` (e.g. `PLAYWRIGHT_MCP_BROWSER`, `PLAYWRIGHT_MCP_HEADLESS`); browsers baked at image build under `PLAYWRIGHT_BROWSERS_PATH=/ms-playwright` |
+| Gateway | Optional `MCPO_API_KEY`, `MCPO_STRICT_AUTH`; `MCPO_PORT` for published host port in Compose |
+
+### Open WebUI
+
+Point Open WebUI at this host as an **OpenAPI tool server** (HTTP), not raw stdio MCP. Follow [Open WebUI OpenAPI servers](https://docs.openwebui.com/openapi-servers/open-webui/) and the [mcpo README](https://github.com/open-webui/mcpo) integration notes.
+
+## Operations (Docker Compose)
+
+- **Logging:** Set `LOG_LEVEL` in `techops/production/.env` (`DEBUG`, `INFO`, …) — supported by mcpo.
+- **Restart:** Compose uses `restart: unless-stopped`.
+- **Upgrades:** Bump the digest in `FROM ghcr.io/open-webui/mcpo@sha256:…` and `@playwright/mcp@…` / npm install lines in [production.Dockerfile](techops/production/production.Dockerfile), then `docker compose … build --no-cache`.
 
 ## Security and compliance
 
@@ -53,16 +88,16 @@ Production / final container definitions live under **`techops/production/`** (n
 
 Use this as a task breakdown; order may shift after spiking mcpo + one MCP.
 
-1. [ ] Pin mcpo version and document the invocation model (CLI args, config file format, port).
-2. [ ] Define or extend **`techops/production/docker-compose.production.yaml`** (and **`techops/production/production.Dockerfile`** as needed) so mcpo + at least one MCP runs end-to-end for smoke tests.
-3. [ ] Add per-MCP blocks: image or install method, env schema, resource limits (especially Playwright).
+1. [x] Pin mcpo version and document the invocation model (CLI args, config file format, port).
+2. [x] Define or extend **`techops/production/docker-compose.production.yaml`** (and **`techops/production/production.Dockerfile`** as needed) so mcpo + at least one MCP runs end-to-end for smoke tests.
+3. [x] Add per-MCP blocks: image or install method, env schema, resource limits (especially Playwright).
 4. [ ] Add Kubernetes manifests (or Helm chart) with internal `Service`, probes, and secret references—no literal secrets.
-5. [ ] Document how Open WebUI points at this host (URL, auth expectations if any).
-6. [ ] Add operational notes: logging, restart policy, upgrade path for upstream MCP repos.
+5. [x] Document how Open WebUI points at this host (URL, auth expectations if any).
+6. [x] Add operational notes: logging, restart policy, upgrade path for upstream MCP repos.
 
 ## Open decisions (fill in as the project evolves)
 
-- Exact mcpo version and config layout (single file vs. layered overrides).
+- Layered config overrides (e.g. multiple JSON files) if complexity grows.
 - Whether Playwright runs in the same pod as mcpo or an isolated workload with shared socket/volume—depends on mcpo and cluster policy.
 - Authn/z between Open WebUI and mcpo (if any beyond network policy).
 
