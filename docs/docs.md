@@ -37,6 +37,13 @@ When planning each integration, capture **required env vars**, **default ports/p
 - **Runtime:** Target **Docker** for local/dev parity and **Kubernetes** for internal cluster deployment.
 - **Network:** Design for **internal namespaces / private networks** only; assume no anonymous public access.
 
+## Production assets (repo layout)
+
+Production / final container definitions live under **`techops/production/`** (not at the repository root):
+
+- **`techops/production/docker-compose.production.yaml`** — production Compose stack
+- **`techops/production/production.Dockerfile`** — production image build
+
 ## Security and compliance
 
 - **No secrets in git:** Use K8s Secrets, sealed secrets, or external secret managers; reference keys by name in docs and manifests only.
@@ -47,7 +54,7 @@ When planning each integration, capture **required env vars**, **default ports/p
 Use this as a task breakdown; order may shift after spiking mcpo + one MCP.
 
 1. [ ] Pin mcpo version and document the invocation model (CLI args, config file format, port).
-2. [ ] Define one **reference Docker Compose** (or equivalent) that runs mcpo + one MCP end-to-end for smoke tests.
+2. [ ] Define or extend **`techops/production/docker-compose.production.yaml`** (and **`techops/production/production.Dockerfile`** as needed) so mcpo + at least one MCP runs end-to-end for smoke tests.
 3. [ ] Add per-MCP blocks: image or install method, env schema, resource limits (especially Playwright).
 4. [ ] Add Kubernetes manifests (or Helm chart) with internal `Service`, probes, and secret references—no literal secrets.
 5. [ ] Document how Open WebUI points at this host (URL, auth expectations if any).
