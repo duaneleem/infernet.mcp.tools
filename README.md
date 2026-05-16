@@ -24,7 +24,7 @@ Run the gateway **only in a container** (no host `mcpo` / `npx` required). From 
 docker compose -f techops/production/docker-compose.production.yaml --env-file techops/production/.env up --build
 ```
 
-- **Docs UI:** `http://localhost:8000/docs` (or `http://localhost:${MCPO_PORT}/docs` if you set `MCPO_PORT` in `techops/production/.env` for the published host port). Per-tool OpenAPI lives under paths such as `/trello/docs`, `/context7/docs`, `/playwright/docs` (see [mcpo](https://github.com/open-webui/mcpo)).
+- **Docs UI:** `http://localhost:${MCPO_PUBLISH_PORT:-8000}/docs` (set `MCPO_PUBLISH_PORT` in `techops/production/.env` to change the **host** port; mcpo always listens on port `8000` inside the container). Per-tool OpenAPI lives under paths such as `/trello/docs`, `/context7/docs`, `/playwright/docs` (see [mcpo](https://github.com/open-webui/mcpo)).
 - **Compose / Dockerfile / `mcp-servers.json`:** [techops/production/README.md](techops/production/README.md).
 
 For scope, security assumptions, and a detailed planning checklist, see **[docs/docs.md](docs/docs.md)**.

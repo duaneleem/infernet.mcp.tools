@@ -25,4 +25,4 @@ docker compose -f techops/production/docker-compose.production.yaml --env-file t
 
 Fill **`TRELLO_*`**, **`CONTEXT7_API_KEY`**, and optional **`MCPO_API_KEY`** in **`techops/production/.env`** before expecting those MCPs to initialize; mcpo still serves HTTP and `/docs` while individual stdio MCPs may fail until credentials are set.
 
-Open `http://localhost:${MCPO_PORT:-8000}/docs` (per-tool docs under paths like `/trello/docs` per mcpo).
+Open `http://localhost:${MCPO_PUBLISH_PORT:-8000}/docs` (per-tool docs under paths like `/trello/docs` per mcpo). The container always listens on port `8000`; `MCPO_PUBLISH_PORT` only changes the host mapping.

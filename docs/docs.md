@@ -55,7 +55,7 @@ The runtime is **Docker-only**: build and run with Compose from the repo root (s
 |------|--------|
 | Gateway image | `ghcr.io/open-webui/mcpo` **pinned by digest** in [production.Dockerfile](techops/production/production.Dockerfile) (`sha256:1e82c9555c19e50b80745705f32b47a2647589f35279527b5118ecd3a71bd467` — corresponds to upstream `main` at pin time; GHCR does not ship `v0.0.x` tags) |
 | Config | `mcpo --config /app/mcp-servers.json` (see [mcpo README](https://github.com/open-webui/mcpo)) |
-| Listen | `--host 0.0.0.0` `--port 8000` (defaults; override with `MCPO_HOST` / `MCPO_PORT` in `techops/production/.env`) |
+| Listen | `--host 0.0.0.0` `--port 8000` inside the container (Compose sets `MCPO_PORT=8000`; use `MCPO_PUBLISH_PORT` in `.env` for the **host** port mapping only) |
 | Optional HTTP auth | `--api-key` / `--strict-auth` via `MCPO_API_KEY` / `MCPO_STRICT_AUTH` |
 
 ### MCP environment (`techops/production/.env`, not committed)
@@ -67,7 +67,7 @@ mcpo spawns each MCP with **`os.environ` merged** with any per-server `env` in J
 | Trello | `TRELLO_API_KEY`, `TRELLO_TOKEN`; optional `TRELLO_WORKSPACE_ID`, `TRELLO_BOARD_ID` |
 | Context7 | `CONTEXT7_API_KEY` |
 | Playwright | Optional `PLAYWRIGHT_MCP_*` (e.g. `PLAYWRIGHT_MCP_BROWSER`, `PLAYWRIGHT_MCP_HEADLESS`); browsers baked at image build under `PLAYWRIGHT_BROWSERS_PATH=/ms-playwright` |
-| Gateway | Optional `MCPO_API_KEY`, `MCPO_STRICT_AUTH`; `MCPO_PORT` for published host port in Compose |
+| Gateway | Optional `MCPO_API_KEY`, `MCPO_STRICT_AUTH`; `MCPO_PUBLISH_PORT` for the host-side published port; `MCPO_PORT` is forced to `8000` in Compose for the container listener |
 
 ### Open WebUI
 
@@ -75,6 +75,7 @@ Point Open WebUI at this host as an **OpenAPI tool server** (HTTP), not raw stdi
 
 ## Operations (Docker Compose)
 
+- **Ports:** `MCPO_PUBLISH_PORT` controls the **host** port in Compose; `MCPO_PORT` is overridden to `8000` for the process inside the container so it always matches the published container port and the healthcheck.
 - **Logging:** Set `LOG_LEVEL` in `techops/production/.env` (`DEBUG`, `INFO`, …) — supported by mcpo.
 - **Restart:** Compose uses `restart: unless-stopped`.
 - **Upgrades:** Bump the digest in `FROM ghcr.io/open-webui/mcpo@sha256:…` and `@playwright/mcp@…` / npm install lines in [production.Dockerfile](techops/production/production.Dockerfile), then `docker compose … build --no-cache`.

@@ -1,5 +1,10 @@
 # Run from repo root. Example:
 #   docker compose -f techops/production/docker-compose.production.yaml --env-file techops/production/.env up --build
+# Or from this directory: docker compose -f docker-compose.production.yaml --env-file .env up --build
+#
+# Network `infernet` is shared with infernet.openwebui (docker-compose.yaml). Start that stack first,
+# or create the network: docker network create infernet
+
 name: infernet-mcp-tools
 services:
   mcpo:
@@ -9,9 +14,13 @@ services:
     env_file:
       - .env
     ports:
-      - "${MCPO_PORT:-8000}:8000"
+      # Host port only; mcpo always listens on 8000 inside the container (see environment.MCPO_PORT).
+      - "${MCPO_PUBLISH_PORT:-8000}:8000"
+    networks:
+      - infernet
     environment:
       MCPO_HOST: "0.0.0.0"
+      MCPO_PORT: "8000"
     shm_size: "2gb"
     restart: unless-stopped
     deploy:
@@ -32,3 +41,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 120s
+
+networks:
+  infernet:
+    external: true
+    name: infernet
